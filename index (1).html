@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>波の記録 — 苦痛ウェーブトラッカー</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1f2435;
+    --border: #2a3045;
+    --accent: #5ce8c0;
+    --accent2: #f0a04b;
+    --accent3: #e05c8a;
+    --text: #d4ddf0;
+    --text-dim: #6b7a99;
+    --text-muted: #3d4861;
+    --danger: #e05c8a;
+    --success: #5ce8c0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(92,232,192,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(92,232,192,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-left h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--accent);
+  }
+  .header-left .subtitle {
+    font-size: .75rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .header-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .pill-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: .05em;
+    white-space: nowrap;
+  }
+  .pill-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Record Form */
+  .record-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .form-title {
+    font-size: .7rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .indicator-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .indicator-block label {
+    display: block;
+    font-size: .72rem;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    letter-spacing: .05em;
+  }
+  .indicator-block .indicator-name {
+    font-weight: 500;
+    color: var(--text);
+    font-size: .85rem;
+    margin-bottom: 4px;
+  }
+
+  /* Level buttons */
+  .level-buttons {
+    display: flex;
+    gap: 6px;
+  }
+  .level-btn {
+    flex: 1;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: .8rem;
+    cursor: pointer;
+    transition: all .15s;
+    font-weight: 500;
+  }
+  .level-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .level-btn.active {
+    border-color: var(--accent);
+    background: rgba(92,232,192,.12);
+    color: var(--accent);
+  }
+
+  /* Voice: use accent2 color */
+  .voice-group .level-btn.active {
+    border-color: var(--accent2);
+    background: rgba(240,160,75,.12);
+    color: var(--accent2);
+  }
+
+  .bp-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: .7rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .06em;
+  }
+
+  .input-group input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: .9rem;
+    outline: none;
+    transition: border-color .2s;
+    -moz-appearance: textfield;
+  }
+  .input-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .input-group input:focus { border-color: var(--accent); }
+
+  .notes-row { margin-bottom: 20px; }
+  .notes-row textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: .85rem;
+    resize: vertical;
+    min-height: 60px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .notes-row textarea:focus { border-color: var(--accent); }
+  .notes-row label {
+    display: block;
+    font-size: .7rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .06em;
+  }
+
+  /* Record Button */
+  .record-btn {
+    width: 100%;
+    height: 56px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--accent) 0%, #38c9a8 100%);
+    color: #0f1117;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: .08em;
+    transition: all .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .record-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background .15s;
+  }
+  .record-btn:hover::after { background: rgba(255,255,255,.12); }
+  .record-btn:active { transform: scale(.98); }
+  .record-btn.flash {
+    animation: btnFlash .4s ease;
+  }
+  @keyframes btnFlash {
+    0% { box-shadow: 0 0 0 0 rgba(92,232,192,.6); }
+    100% { box-shadow: 0 0 0 24px rgba(92,232,192,0); }
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: .65rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: .06em;
+  }
+
+  /* History */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: .7rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: start;
+    animation: slideIn .3s ease;
+    transition: border-color .2s;
+  }
+  .history-item:hover { border-color: var(--border); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .history-time {
+    font-family: 'DM Mono', monospace;
+    font-size: .75rem;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .history-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid;
+    letter-spacing: .04em;
+  }
+  .badge-voice {
+    border-color: rgba(240,160,75,.4);
+    background: rgba(240,160,75,.08);
+    color: var(--accent2);
+  }
+  .badge-gesture {
+    border-color: rgba(92,232,192,.4);
+    background: rgba(92,232,192,.08);
+    color: var(--accent);
+  }
+  .badge-bp {
+    border-color: rgba(224,92,138,.4);
+    background: rgba(224,92,138,.08);
+    color: var(--accent3);
+  }
+
+  .history-note {
+    font-size: .78rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  .del-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: .9rem;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: color .2s;
+    line-height: 1;
+  }
+  .del-btn:hover { color: var(--danger); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 0;
+    color: var(--text-muted);
+    font-size: .82rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .06em;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-family: 'DM Mono', monospace;
+    font-size: .75rem;
+    letter-spacing: .06em;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Clear confirm */
+  .clear-confirm {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .clear-confirm.open { display: flex; }
+  .confirm-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    text-align: center;
+    max-width: 320px;
+    width: 90%;
+  }
+  .confirm-box h3 { font-size: 1rem; margin-bottom: 8px; }
+  .confirm-box p { font-size: .8rem; color: var(--text-dim); margin-bottom: 20px; }
+  .confirm-btns { display: flex; gap: 10px; }
+  .confirm-btns button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: .85rem;
+    font-weight: 500;
+    transition: all .2s;
+  }
+  .btn-cancel { background: var(--surface2); color: var(--text-dim); }
+  .btn-cancel:hover { color: var(--text); }
+  .btn-delete { background: rgba(224,92,138,.15); color: var(--danger); border-color: rgba(224,92,138,.3); }
+  .btn-delete:hover { background: rgba(224,92,138,.25); }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .indicator-row { grid-template-columns: 1fr; }
+    .bp-row { grid-template-columns: 1fr 1fr; }
+    .stats-bar { grid-template-columns: repeat(3,1fr); }
+    .stat-num { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+  <header>
+    <div class="header-left">
+      <h1>波の記録</h1>
+      <div class="subtitle">苦痛波形トラッカー v1.0</div>
+    </div>
+    <div class="header-right">
+      <button class="pill-btn" onclick="exportCSV()">CSV出力</button>
+      <button class="pill-btn" style="color:var(--danger);border-color:rgba(224,92,138,.3)" onclick="openClear()">全削除</button>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-total">0</div>
+      <div class="stat-label">今日の記録</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-all" style="color:var(--accent2)">0</div>
+      <div class="stat-label">累計記録</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-last" style="color:var(--text-dim);font-size:.9rem">—</div>
+      <div class="stat-label">最終記録</div>
+    </div>
+  </div>
+
+  <!-- Record Form -->
+  <div class="record-form">
+    <div class="form-title">● 観察指標を記録</div>
+
+    <div class="indicator-row">
+      <!-- Voice -->
+      <div class="indicator-block">
+        <div class="indicator-name">🔊 声の大きさ</div>
+        <div class="indicator-block" style="font-size:.7rem;color:var(--text-dim);margin-bottom:8px">第三者観察</div>
+        <div class="level-buttons voice-group" id="voice-btns">
+          <button class="level-btn" onclick="setLevel('voice',1)" data-val="1">1</button>
+          <button class="level-btn" onclick="setLevel('voice',2)" data-val="2">2</button>
+          <button class="level-btn" onclick="setLevel('voice',3)" data-val="3">3</button>
+          <button class="level-btn" onclick="setLevel('voice',4)" data-val="4">4</button>
+          <button class="level-btn" onclick="setLevel('voice',5)" data-val="5">5</button>
+        </div>
+      </div>
+
+      <!-- Gesture -->
+      <div class="indicator-block">
+        <div class="indicator-name">🙌 身振り手振り</div>
+        <div class="indicator-block" style="font-size:.7rem;color:var(--text-dim);margin-bottom:8px">第三者観察</div>
+        <div class="level-buttons" id="gesture-btns">
+          <button class="level-btn" onclick="setLevel('gesture',1)" data-val="1">1</button>
+          <button class="level-btn" onclick="setLevel('gesture',2)" data-val="2">2</button>
+          <button class="level-btn" onclick="setLevel('gesture',3)" data-val="3">3</button>
+          <button class="level-btn" onclick="setLevel('gesture',4)" data-val="4">4</button>
+          <button class="level-btn" onclick="setLevel('gesture',5)" data-val="5">5</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blood Pressure -->
+    <div class="bp-row">
+      <div class="input-group">
+        <label>収縮期 (mmHg)</label>
+        <input type="number" id="bp-sys" placeholder="120" min="60" max="250">
+      </div>
+      <div class="input-group">
+        <label>拡張期 (mmHg)</label>
+        <input type="number" id="bp-dia" placeholder="80" min="40" max="150">
+      </div>
+      <div class="input-group">
+        <label>脈拍 (bpm)</label>
+        <input type="number" id="bp-pulse" placeholder="72" min="30" max="200">
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="notes-row">
+      <label>メモ (任意)</label>
+      <textarea id="notes-input" placeholder="状況・環境・その他気づきなど…"></textarea>
+    </div>
+
+    <button class="record-btn" id="record-btn" onclick="recordEvent()">
+      今この瞬間を記録する
+    </button>
+  </div>
+
+  <!-- History -->
+  <div class="section-header">
+    <div class="section-title">● 記録履歴</div>
+    <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text-muted)">ローカル自動保存</div>
+  </div>
+
+  <div class="history-list" id="history-list">
+    <div class="empty-state" id="empty-state">まだ記録がありません</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Clear Confirm -->
+<div class="clear-confirm" id="clear-confirm">
+  <div class="confirm-box">
+    <h3>全データを削除</h3>
+    <p>保存されたすべての記録が削除されます。<br>この操作は取り消せません。</p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeClear()">キャンセル</button>
+      <button class="btn-delete" onclick="clearAll()">削除する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'wave_tracker_records_v1';
+let records = [];
+let selectedLevels = { voice: null, gesture: null };
+
+// Load
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    records = raw ? JSON.parse(raw) : [];
+  } catch(e) { records = []; }
+  renderAll();
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+// Level selection
+function setLevel(type, val) {
+  selectedLevels[type] = val;
+  const group = type === 'voice' ? document.getElementById('voice-btns') : document.getElementById('gesture-btns');
+  group.querySelectorAll('.level-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.val) === val);
+  });
+}
+
+// Record event
+function recordEvent() {
+  const now = new Date();
+  const bpSys = document.getElementById('bp-sys').value;
+  const bpDia = document.getElementById('bp-dia').value;
+  const bpPulse = document.getElementById('bp-pulse').value;
+  const notes = document.getElementById('notes-input').value.trim();
+
+  const rec = {
+    id: Date.now(),
+    timestamp: now.toISOString(),
+    voice: selectedLevels.voice,
+    gesture: selectedLevels.gesture,
+    bp_sys: bpSys || null,
+    bp_dia: bpDia || null,
+    bp_pulse: bpPulse || null,
+    notes: notes || null
+  };
+
+  records.unshift(rec);
+  save();
+  renderAll();
+
+  // Flash button
+  const btn = document.getElementById('record-btn');
+  btn.classList.add('flash');
+  setTimeout(() => btn.classList.remove('flash'), 500);
+
+  // Toast
+  showToast('記録しました');
+
+  // Clear inputs
+  document.getElementById('notes-input').value = '';
+  document.getElementById('bp-sys').value = '';
+  document.getElementById('bp-dia').value = '';
+  document.getElementById('bp-pulse').value = '';
+  // Don't clear levels — keep for quick re-recording
+}
+
+function renderAll() {
+  renderHistory();
+  renderStats();
+}
+
+function renderStats() {
+  const today = new Date().toDateString();
+  const todayCount = records.filter(r => new Date(r.timestamp).toDateString() === today).length;
+  document.getElementById('stat-total').textContent = todayCount;
+  document.getElementById('stat-all').textContent = records.length;
+
+  if (records.length > 0) {
+    const last = new Date(records[0].timestamp);
+    const hm = last.getHours().toString().padStart(2,'0') + ':' + last.getMinutes().toString().padStart(2,'0');
+    document.getElementById('stat-last').textContent = hm;
+    document.getElementById('stat-last').style.fontSize = '1.2rem';
+  } else {
+    document.getElementById('stat-last').textContent = '—';
+    document.getElementById('stat-last').style.fontSize = '.9rem';
+  }
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const empty = document.getElementById('empty-state');
+
+  if (records.length === 0) {
+    list.innerHTML = '';
+    list.appendChild(empty);
+    empty.style.display = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  list.innerHTML = '';
+
+  records.forEach(rec => {
+    const dt = new Date(rec.timestamp);
+    const dateStr = dt.getFullYear() + '/' +
+      String(dt.getMonth()+1).padStart(2,'0') + '/' +
+      String(dt.getDate()).padStart(2,'0') + ' ' +
+      String(dt.getHours()).padStart(2,'0') + ':' +
+      String(dt.getMinutes()).padStart(2,'0') + ':' +
+      String(dt.getSeconds()).padStart(2,'0');
+
+    const item = document.createElement('div');
+    item.className = 'history-item';
+
+    let badges = '';
+    if (rec.voice) badges += `<span class="badge badge-voice">🔊 声: ${rec.voice}/5</span>`;
+    if (rec.gesture) badges += `<span class="badge badge-gesture">🙌 動き: ${rec.gesture}/5</span>`;
+    if (rec.bp_sys && rec.bp_dia) badges += `<span class="badge badge-bp">血圧: ${rec.bp_sys}/${rec.bp_dia}</span>`;
+    if (rec.bp_pulse) badges += `<span class="badge badge-bp" style="margin-left:0">脈: ${rec.bp_pulse}bpm</span>`;
+
+    item.innerHTML = `
+      <div>
+        <div class="history-time">${dateStr}</div>
+        <div class="history-badges">${badges || '<span class="badge" style="border-color:var(--border);color:var(--text-muted)">指標なし</span>'}</div>
+        ${rec.notes ? `<div class="history-note">${escapeHtml(rec.notes)}</div>` : ''}
+      </div>
+      <button class="del-btn" onclick="deleteRecord(${rec.id})" title="削除">✕</button>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function deleteRecord(id) {
+  records = records.filter(r => r.id !== id);
+  save();
+  renderAll();
+  showToast('削除しました');
+}
+
+// CSV Export
+function exportCSV() {
+  if (records.length === 0) { showToast('記録がありません'); return; }
+
+  const header = ['日時','声の大きさ(1-5)','身振り手振り(1-5)','収縮期血圧(mmHg)','拡張期血圧(mmHg)','脈拍(bpm)','メモ'];
+  const rows = records.map(r => [
+    new Date(r.timestamp).toLocaleString('ja-JP'),
+    r.voice ?? '',
+    r.gesture ?? '',
+    r.bp_sys ?? '',
+    r.bp_dia ?? '',
+    r.bp_pulse ?? '',
+    r.notes ? `"${r.notes.replace(/"/g,'""')}"` : ''
+  ]);
+
+  const csv = '\uFEFF' + [header, ...rows].map(row => row.join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `wave_record_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSVを出力しました');
+}
+
+// Clear
+function openClear() { document.getElementById('clear-confirm').classList.add('open'); }
+function closeClear() { document.getElementById('clear-confirm').classList.remove('open'); }
+function clearAll() {
+  records = [];
+  save();
+  renderAll();
+  closeClear();
+  showToast('全データを削除しました');
+}
+
+// Toast
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// Init
+load();
+</script>
+</body>
+</html>
